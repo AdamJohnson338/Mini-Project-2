@@ -22,7 +22,7 @@ int main(int argc, char *argv[])
    if(settickets(tickets) == -1)
    {
     printf(1, 
-           "settickets failed\n");
+           "settickets error\n");
     exit();
    }
 

@@ -302,7 +302,8 @@ scheduler(void)
 	if(total > 0){
 	  winner = rand() % total; // a number from 0 to total -1
 	  counter = 0;
-
+          
+	  // Walks ptable
 	  for(p = ptable.proc; p < &ptable.proc[NPROC]; p++){
 	     if(p->state != RUNNABLE)
 	       continue;

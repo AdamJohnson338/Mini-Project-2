@@ -13,10 +13,10 @@ main(int argc, char *argv[])
   printf(2, "getpinfo failed\n");
   exit();
  }
- printf(1, "PID\tSize\tTickets\tStride\tPass\n");
+ printf(1, "PID\tSize\tTickets\tStride\tPass\tTicks\n");
  for(i = 0; i < NPROC; i++){
   if(st.inuse[i])
-   printf(1, "%d\t%d\t%d\t%d\t%d\n", st.pid[i], st.size[i], st.tickets[i], st.stride[i], st.pass[i]);
+   printf(1, "%d\t%d\t%d\t%d\t%d\t%d\n", st.pid[i], st.size[i], st.tickets[i], st.stride[i], st.pass[i], st.ticks[i]);
  }
  exit();
 }
