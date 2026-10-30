@@ -8,6 +8,16 @@
 #include "pstat.h"
 #if defined(SCHED_LOTTERY)
 #define SCHED_NAME "LOTTERY"
+static uint rseed = 2463534242; // any nonzero starting value
+static uint
+// random number generator
+rand(void)
+{
+ rseed ^= rseed << 13;
+ rseed ^= rseed >> 17;
+ rseed ^= rseed << 5;
+ return rseed;
+}
 #elif defined(SCHED_STRIDE)
 #define SCHED_NAME "STRIDE"
 #else
@@ -20,17 +30,6 @@ struct {
 } ptable;
 
 static struct proc *initproc;
-
-static uint rseed = 2463534242; // any nonzero starting value
-static uint
-// random number generator
-rand(void)
-{
- rseed ^= rseed << 13;
- rseed ^= rseed >> 17;
- rseed ^= rseed << 5;
- return rseed;
-}
 
 int nextpid = 1;
 extern void forkret(void);
@@ -283,7 +282,6 @@ wait(void)
 void
 scheduler(void)
 {
-  int total, winner, counter;
   struct proc *p;
   
   for(;;){
@@ -293,6 +291,7 @@ scheduler(void)
         acquire(&ptable.lock);
 
 	// Sum of tickets of all RUNNABLE processes
+	int total, winner, counter;
 	total = 0;
 	for(p = ptable.proc; p < &ptable.proc[NPROC]; p++){
 	   if(p->state == RUNNABLE)
