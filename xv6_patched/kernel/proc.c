@@ -37,6 +37,31 @@ extern void trapret(void);
 
 static void wakeup1(void *chan);
 
+static int lastpass = 0;
+
+static int
+minpass(void)
+{
+ struct proc *p;
+ int minimum = 0;
+ int found = 0;
+
+ for(p = ptable.proc; p < &ptable.proc[NPROC]; p++){
+  if(p->state != RUNNABLE)
+   continue;
+
+  if(!found || p->pass < minimum){
+   minimum = p->pass;
+   found = 1;
+  }
+ }
+
+ if(found)
+  return minimum;
+ 
+ return lastpass;
+}
+
 void
 pinit(void)
 {
@@ -66,7 +91,7 @@ found:
   p->numTicks = 0;
   p->tickets = DEFAULT_TICKETS;
   p->stride = STRIDE_BIG / p->tickets;
-  p->pass = 0; // you will revisit this line in Phase 5
+  p->pass = minpass(); 
   release(&ptable.lock);
 
   // Allocate kernel stack if possible.
@@ -288,44 +313,73 @@ scheduler(void)
     // Enable interrupts on this processor.
     sti();
     #if defined(SCHED_LOTTERY)
-        acquire(&ptable.lock);
+    acquire(&ptable.lock);
 
-	// Sum of tickets of all RUNNABLE processes
-	int total, winner, counter;
-	total = 0;
-	for(p = ptable.proc; p < &ptable.proc[NPROC]; p++){
-	   if(p->state == RUNNABLE)
-	     total += p->tickets;
-	}
+    // Sum of tickets of all RUNNABLE processes
+    int total, winner, counter;
+    total = 0;
+    for(p = ptable.proc; p < &ptable.proc[NPROC]; p++){
+       if(p->state == RUNNABLE)
+         total += p->tickets;
+    }
 
-	if(total > 0){
-	  winner = rand() % total; // a number from 0 to total -1
-	  counter = 0;
+    if(total > 0){
+     winner = rand() % total; // a number from 0 to total -1
+     counter = 0;
           
-	  // Walks ptable
-	  for(p = ptable.proc; p < &ptable.proc[NPROC]; p++){
-	     if(p->state != RUNNABLE)
-	       continue;
-	     counter += p->tickets;
-	     if(counter > winner){
-	       proc = p;
-	       switchuvm(p);
-	       p->state = RUNNING;
-	       p->numTicks += 1;
+     // Walks ptable
+     for(p = ptable.proc; p < &ptable.proc[NPROC]; p++){
+        if(p->state != RUNNABLE)
+          continue;
+        counter += p->tickets;
+        if(counter > winner){
+          proc = p;
+          switchuvm(p);
+          p->state = RUNNING;
+          p->numTicks += 1;
 
-	       swtch(&cpu->scheduler, proc->context);
+          swtch(&cpu->scheduler, proc->context);
 
-	       switchkvm();
-	       proc = 0;
+          switchkvm();
+          proc = 0;
 
-	       break;
-	   }
-	 }
-	}
+          break;
+        }
+     }
+    }
 
-	release(&ptable.lock);
+    release(&ptable.lock);
     #elif defined(SCHED_STRIDE)
-    // Phase 5 goes here
+    acquire(&ptable.lock);
+
+    struct proc *best = 0;
+
+    for(p = ptable.proc; p < &ptable.proc[NPROC]; p++){
+       if(p->state != RUNNABLE)
+	 continue;
+
+       if(best == 0 || p->pass < best->pass){
+	 best = p;
+       }
+    }
+
+    if(best != 0){
+      p = best;
+      p->pass += p->stride;
+      lastpass = p->pass;
+
+      proc = p;
+      switchuvm(p);
+      p->state = RUNNING;
+      p->numTicks += 1;
+      
+      swtch(&cpu->scheduler, proc->context);
+
+      switchkvm();
+      proc = 0;
+    }
+    release(&ptable.lock);
+
     #else
     // The original Round Robin loop from Lab 2, unchanged
      acquire(&ptable.lock);
