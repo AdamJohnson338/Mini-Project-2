@@ -6,6 +6,7 @@ USER_PROGS := \
 	childrentester\
 	echo\
 	forktest\
+	gamer\
 	grep\
 	init\
 	ps\
@@ -13,6 +14,7 @@ USER_PROGS := \
 	ln\
 	ls\
 	mkdir\
+	monitor\
 	rm\
 	settickets\
 	schedtest\
